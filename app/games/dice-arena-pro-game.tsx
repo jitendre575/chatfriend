@@ -38,6 +38,11 @@ export const DiceArenaProGame: React.FC = () => {
     const [roundStatus, setRoundStatus] = useState<'betting' | 'locked' | 'result'>('betting');
     const [lastWinner, setLastWinner] = useState<'left' | 'center' | 'right' | null>(null);
 
+    const betsRef = useRef(bets);
+    useEffect(() => {
+        betsRef.current = bets;
+    }, [bets]);
+
     // Auto-game timer
     useEffect(() => {
         if (!adminSettings.isGameOn) return;
@@ -45,7 +50,7 @@ export const DiceArenaProGame: React.FC = () => {
         const timerId = setInterval(() => {
             setTimeLeft((prev) => {
                 if (prev <= 0) {
-                    handleResult();
+                    processResult();
                     return adminSettings.roundTime;
                 }
 
@@ -62,7 +67,7 @@ export const DiceArenaProGame: React.FC = () => {
         return () => clearInterval(timerId);
     }, [adminSettings.isGameOn, adminSettings.roundTime]);
 
-    const handleResult = () => {
+    const processResult = () => {
         setIsRolling(true);
         setRoundStatus('result');
 
@@ -86,18 +91,19 @@ export const DiceArenaProGame: React.FC = () => {
                 setLastWinner(winner);
                 setIsRolling(false);
 
-                // Calculate payout
+                // Calculate payout using the ref to avoid stale closure
+                const currentBets = betsRef.current;
                 let winAmount = 0;
-                if (winner === 'left') winAmount = bets.left * adminSettings.leftPayout;
-                if (winner === 'center') winAmount = bets.center * adminSettings.centerPayout;
-                if (winner === 'right') winAmount = bets.right * adminSettings.rightPayout;
+                if (winner === 'left') winAmount = currentBets.left * adminSettings.leftPayout;
+                if (winner === 'center') winAmount = currentBets.center * adminSettings.centerPayout;
+                if (winner === 'right') winAmount = currentBets.right * adminSettings.rightPayout;
 
                 if (winAmount > 0) {
                     setBalance(prev => prev + winAmount);
                     toast.success(`WINNER! Total is ${total}. Payout: ₹${winAmount}`, {
                         className: "bg-primary border-primary text-primary-foreground font-black",
                     });
-                } else if (bets.left > 0 || bets.center > 0 || bets.right > 0) {
+                } else if (currentBets.left > 0 || currentBets.center > 0 || currentBets.right > 0) {
                     toast.error(`LOSE! Total is ${total}. Winner: ${winner.toUpperCase()}`, {
                         className: "bg-destructive border-destructive text-white font-bold",
                     });
@@ -109,7 +115,7 @@ export const DiceArenaProGame: React.FC = () => {
                     total,
                     winner,
                     timestamp: new Date().toLocaleTimeString(),
-                    totalBets: { ...bets }
+                    totalBets: { ...currentBets }
                 });
 
                 // Reset bets for next round
