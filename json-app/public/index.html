@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Auth - Premium Experience</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div class="background-glow"></div>
+    
+    <div class="container">
+        <!-- Auth Card -->
+        <div id="auth-container" class="glass-card animate-fade-in">
+            <div class="card-header">
+                <div class="logo-box">
+                    <i data-lucide="shield-check"></i>
+                </div>
+                <h1 id="auth-title">Welcome Back</h1>
+                <p id="auth-subtitle">Enter your credentials to access your account</p>
+            </div>
+
+            <form id="auth-form" class="auth-form">
+                <div id="name-group" class="input-group hidden">
+                    <label>Full Name</label>
+                    <div class="input-wrapper">
+                        <i data-lucide="user"></i>
+                        <input type="text" id="name" placeholder="John Doe">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Email Address</label>
+                    <div class="input-wrapper">
+                        <i data-lucide="mail"></i>
+                        <input type="email" id="email" placeholder="name@example.com" required>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Password</label>
+                    <div class="input-wrapper">
+                        <i data-lucide="lock"></i>
+                        <input type="password" id="password" placeholder="••••••••" required>
+                    </div>
+                </div>
+
+                <button type="submit" id="submit-btn" class="btn-primary">
+                    <span>Login</span>
+                    <i data-lucide="arrow-right"></i>
+                </button>
+            </form>
+
+            <div class="card-footer">
+                <p id="toggle-text">Don't have an account? <a href="#" id="toggle-auth">Create one</a></p>
+                <div class="admin-link">
+                    <a href="admin.html">Go to Admin Panel</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success Dashboard (Mock) -->
+        <div id="dashboard" class="glass-card hidden">
+            <div class="card-header">
+                <div class="success-icon">
+                    <i data-lucide="check-circle"></i>
+                </div>
+                <h1>Welcome, <span id="user-name-display">User</span>!</h1>
+                <p>You have successfully logged into the JSON Auth system.</p>
+            </div>
+            <button onclick="logout()" class="btn-secondary">Logout</button>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script src="app.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
