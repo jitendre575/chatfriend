@@ -4,79 +4,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel - JSON Auth</title>
+    <title>Admin Panel - User App</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
-        rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
 <body>
-    <div class="background-glow"></div>
-
-    <div class="container" style="max-width: 800px;">
-        <!-- Admin Login -->
-        <div id="admin-login" class="glass-card animate-fade-in">
-            <div class="card-header">
-                <div class="logo-box" style="background: linear-gradient(135deg, #f59e0b, #ef4444);">
-                    <i data-lucide="key-round"></i>
-                </div>
-                <h1>Admin Access</h1>
-                <p>Enter the master password to view registered users</p>
+    <!-- Login Overlay -->
+    <div id="loginOverlay" class="login-overlay">
+        <div class="container">
+            <h1>Admin Login</h1>
+            <div class="form-group">
+                <label for="adminPass">Enter Admin Password</label>
+                <input type="password" id="adminPass" placeholder="••••••••">
             </div>
-
-            <form id="admin-login-form">
-                <div class="input-group">
-                    <label>Master Password</label>
-                    <div class="input-wrapper">
-                        <i data-lucide="lock"></i>
-                        <input type="password" id="admin-password" placeholder="••••••••" required>
-                    </div>
-                </div>
-                <button type="submit" class="btn-primary" style="background: #f59e0b;">
-                    <span>Access Database</span>
-                </button>
-            </form>
-            <div class="card-footer">
-                <a href="index.html">Back to User Login</a>
-            </div>
-        </div>
-
-        <!-- Admin Table -->
-        <div id="admin-dashboard" class="glass-card hidden animate-fade-in">
-            <div class="admin-header">
-                <div>
-                    <h1>System Users</h1>
-                    <p>Total users registered in JSON database</p>
-                </div>
-                <button onclick="adminLogout()" class="btn-secondary"
-                    style="width: auto; margin: 0; padding: 10px 20px;">Exit Panel</button>
-            </div>
-
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Joined Date</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="user-table-body">
-                        <!-- Users will be injected here -->
-                    </tbody>
-                </table>
+            <button onclick="loginAdmin()" class="btn">Login</button>
+            <div id="loginMessage" class="message error"></div>
+            <div style="text-align: center; margin-top: 20px;">
+                <a href="register.html" style="color: #94a3b8; font-size: 0.8rem; text-decoration: none;">Back to
+                    Register</a>
             </div>
         </div>
     </div>
 
-    <div id="toast-container"></div>
+    <!-- Admin Content (hidden by default) -->
+    <div id="adminPanel" class="admin-container" style="display: none;">
+        <h1 style="text-align: left;">Registered Users</h1>
+        <div id="userGrid" class="user-grid">
+            <!-- User cards will be injected here -->
+        </div>
+        <div style="margin-top: 30px; text-align: center;">
+            <button onclick="logout()" class="btn"
+                style="width: auto; padding: 10px 30px; background: #334155;">Logout</button>
+        </div>
+    </div>
 
-    <script src="admin.js"></script>
     <script>
-        lucide.createIcons();
+        const loginOverlay = document.getElementById('loginOverlay');
+        const adminPanel = document.getElementById('adminPanel');
+        const userGrid = document.getElementById('userGrid');
+        const loginMessage = document.getElementById('loginMessage');
+
+        // Check if already logged in (sessionStorage)
+        if (sessionStorage.getItem('adminLoggedIn') === 'true') {
+            showAdminPanel();
+        }
+
+        async function loginAdmin() {
+            const password = document.getElementById('adminPass').value;
+
+            try {
+                const response = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    sessionStorage.setItem('adminLoggedIn', 'true');
+                    showAdminPanel();
+                } else {
+                    loginMessage.innerText = result.message;
+                    loginMessage.style.display = 'block';
+                }
+            } catch (error) {
+                loginMessage.innerText = 'Error connecting to server';
+                loginMessage.style.display = 'block';
+            }
+        }
+
+        async function showAdminPanel() {
+            loginOverlay.style.display = 'none';
+            adminPanel.style.display = 'block';
+            adminPanel.classList.add('fadeIn');
+            fetchUsers();
+        }
+
+        async function fetchUsers() {
+            try {
+                const response = await fetch('/api/admin/users');
+                const users = await response.json();
+
+                userGrid.innerHTML = '';
+
+                if (users.length === 0) {
+                    userGrid.innerHTML = '<p style="color: #94a3b8; grid-column: 1/-1; text-align: center;">No users registered yet.</p>';
+                    return;
+                }
+
+                users.forEach(user => {
+                    const card = document.createElement('div');
+                    card.className = 'user-card';
+                    card.innerHTML = `
+                        <img src="/uploads/${user.profileImage}" alt="${user.name}" class="user-img" onerror="this.src='https://via.placeholder.com/100'">
+                        <div class="user-name">${user.name}</div>
+                        <div class="user-email">${user.email}</div>
+                    `;
+                    userGrid.appendChild(card);
+                });
+            } catch (error) {
+                console.error('Error fetching users:', error);
+            }
+        }
+
+        function logout() {
+            sessionStorage.removeItem('adminLoggedIn');
+            location.reload();
+        }
     </script>
 </body>
 

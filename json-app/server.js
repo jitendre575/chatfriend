@@ -1,125 +1,127 @@
-require('dotenv').config();
 const express = require('express');
+const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
+
+// Admin Config
+const ADMIN_PASSWORD = '335524JI';
+
+// File Paths
 const USERS_FILE = path.join(__dirname, 'data', 'users.json');
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
+const DATA_DIR = path.join(__dirname, 'data');
 
-// Ensure data directory exists
-const dataDir = path.join(__dirname, 'data');
-if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-    console.log('Created data directory');
-}
+// Create necessary folders if they don't exist
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR);
+if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, JSON.stringify([]));
 
-// Middleware
-app.use(cors({
-    origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : '*',
-    methods: ['GET', 'POST'],
-    credentials: true
-}));
+// Express Middlewares
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.urlencoded({ extended: true }));
+app.use(cors());
+app.use(express.static('public'));
+app.use('/uploads', express.static('uploads')); // Serve uploaded images
 
-// Initialize users.json
-if (!fs.existsSync(USERS_FILE)) {
-    fs.writeFileSync(USERS_FILE, JSON.stringify([], null, 2));
-    console.log('Initialized users.json');
-}
-
-// Helper to read users with error handling
-const readUsers = () => {
-    try {
-        if (!fs.existsSync(USERS_FILE)) return [];
-        const data = fs.readFileSync(USERS_FILE, 'utf8');
-        return JSON.parse(data || '[]');
-    } catch (err) {
-        console.error('Error reading users file:', err);
-        return [];
+// Multer Storage Configuration
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/');
+    },
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + '-' + file.originalname);
     }
+});
+const upload = multer({ storage: storage });
+
+// Helper to read users
+const getUsers = () => {
+    const data = fs.readFileSync(USERS_FILE, 'utf-8');
+    return JSON.parse(data || '[]');
 };
 
-// Helper to write users with atomic write principle (temp file then rename)
-const writeUsers = (users) => {
-    try {
-        const tempFile = USERS_FILE + '.tmp';
-        fs.writeFileSync(tempFile, JSON.stringify(users, null, 2));
-        fs.renameSync(tempFile, USERS_FILE);
-    } catch (err) {
-        console.error('Error writing users file:', err);
-        throw new Error('Database write failure');
-    }
+// Helper to save users
+const saveUsers = (users) => {
+    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
 };
 
-// API Routes
-app.post('/api/register', (req, res) => {
+// --- API ROUTES ---
+
+// 1. User Registration
+app.post('/api/register', upload.single('profileImage'), (req, res) => {
     try {
         const { name, email, password } = req.body;
-        if (!name || !email || !password) return res.status(400).json({ message: 'All fields required' });
+        const profileImage = req.file ? req.file.filename : null;
 
-        const users = readUsers();
-        if (users.find(u => u.email === email)) return res.status(400).json({ message: 'User already exists' });
+        if (!name || !email || !password || !profileImage) {
+            return res.status(400).json({ message: 'All fields including image are required.' });
+        }
+
+        const users = getUsers();
+
+        // Duplicate account check
+        const existingUser = users.find(u => u.email === email);
+        if (existingUser) {
+            return res.status(400).json({ message: 'Email already registered.' });
+        }
 
         const newUser = {
             id: Date.now(),
             name,
             email,
-            password, // Use bcrypt for real production
-            createdAt: new Date().toISOString()
+            password,
+            profileImage
         };
 
         users.push(newUser);
-        writeUsers(users);
+        saveUsers(users);
 
-        res.status(201).json({ message: 'Registration successful', user: { name, email } });
-    } catch (err) {
-        res.status(500).json({ message: 'Internal server error during registration' });
+        res.status(201).json({ message: 'Registration successful!' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error during registration.' });
     }
 });
 
-app.post('/api/login', (req, res) => {
-    try {
-        const { email, password } = req.body;
-        const users = readUsers();
-        const user = users.find(u => u.email === email && u.password === password);
-
-        if (!user) return res.status(401).json({ message: 'Invalid credentials' });
-        res.json({ message: 'Login successful', user: { name: user.name, email: user.email } });
-    } catch (err) {
-        res.status(500).json({ message: 'Server error' });
-    }
-});
-
+// 2. Admin Login
 app.post('/api/admin/login', (req, res) => {
     const { password } = req.body;
     if (password === ADMIN_PASSWORD) {
-        res.json({ success: true, token: Buffer.from(ADMIN_PASSWORD).toString('base64') });
+        res.status(200).json({ success: true, message: 'Login successful' });
     } else {
-        res.status(401).json({ message: 'Incorrect password' });
+        res.status(401).json({ success: false, message: 'Invalid password' });
     }
 });
 
+// 3. View All Registered Users (Admin)
 app.get('/api/admin/users', (req, res) => {
-    const token = req.headers['authorization'];
-    if (token !== Buffer.from(ADMIN_PASSWORD).toString('base64')) {
-        return res.status(403).json({ message: 'Unauthorized' });
+    // In a real app, you'd check a session/token here. 
+    // For this simple version, we'll assume the frontend only calls this after login.
+    try {
+        const users = getUsers();
+        // Return only what's needed for the panel
+        const userList = users.map(u => ({
+            name: u.name,
+            email: u.email,
+            profileImage: u.profileImage
+        }));
+        res.json(userList);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching users.' });
     }
-
-    const users = readUsers();
-    const sanitized = users.map(({ password, ...rest }) => rest);
-    res.json(sanitized);
 });
 
-// Catch-all middleware for client-side routing
-app.use((req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// 4. Default Routing - Serve Register Page
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'register.html'));
 });
 
+// Start Server
 app.listen(PORT, () => {
-    console.log(`Server running at port ${PORT}`);
-    console.log(`Using Database at ${USERS_FILE}`);
+    console.log(`Server is running at http://localhost:${PORT}`);
+    console.log(`Admin Panel available at http://localhost:${PORT}/admin.html`);
 });
