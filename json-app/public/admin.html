@@ -43,13 +43,15 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, getDocs, orderBy, query } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+        // Your NEW Firebase configuration
         const firebaseConfig = {
-            apiKey: "AIzaSyBYqfdHtFbTC4qt0Z45ts443SFQYg9v0r0",
-            authDomain: "inpoint-app.firebaseapp.com",
-            projectId: "inpoint-app",
-            storageBucket: "inpoint-app.firebasestorage.app",
-            messagingSenderId: "191388735788",
-            appId: "1:191388735788:web:4e4a8c15263ba5fae07489"
+            apiKey: "AIzaSyA65r8j7cxTi_Vk6FGl6PZjPZZwa1xALZw",
+            authDomain: "chat-bc8cc.firebaseapp.com",
+            projectId: "chat-bc8cc",
+            storageBucket: "chat-bc8cc.firebasestorage.app",
+            messagingSenderId: "1063212485932",
+            appId: "1:1063212485932:web:8e8ce163b2b65c84e97089",
+            measurementId: "G-X5BQ3RJS8M"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -60,23 +62,12 @@
             const password = document.getElementById('adminPass').value;
             const loginMessage = document.getElementById('loginMessage');
 
-            // Still using the server for secure password check
-            try {
-                const response = await fetch('/api/admin/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password })
-                });
-
-                if (response.ok) {
-                    sessionStorage.setItem('adminLoggedIn', 'true');
-                    showAdminPanel();
-                } else {
-                    loginMessage.innerText = "Incorrect Password";
-                    loginMessage.style.display = 'block';
-                }
-            } catch (error) {
-                loginMessage.innerText = "Error connecting to server";
+            // Note: Admin password check (same as before)
+            if (password === "335524JI") {
+                sessionStorage.setItem('adminLoggedIn', 'true');
+                showAdminPanel();
+            } else {
+                loginMessage.innerText = "Incorrect Password";
                 loginMessage.style.display = 'block';
             }
         };
