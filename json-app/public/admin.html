@@ -26,9 +26,9 @@
         </div>
     </div>
 
-    <!-- Admin Content (hidden by default) -->
+    <!-- Admin Content -->
     <div id="adminPanel" class="admin-container" style="display: none;">
-        <h1 style="text-align: left;">Registered Users</h1>
+        <h1 style="text-align: left;">Live Registered Users</h1>
         <div id="userGrid" class="user-grid">
             <!-- User cards will be injected here -->
         </div>
@@ -38,20 +38,29 @@
         </div>
     </div>
 
-    <script>
-        const loginOverlay = document.getElementById('loginOverlay');
-        const adminPanel = document.getElementById('adminPanel');
-        const userGrid = document.getElementById('userGrid');
-        const loginMessage = document.getElementById('loginMessage');
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, getDocs, orderBy, query } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // Check if already logged in (sessionStorage)
-        if (sessionStorage.getItem('adminLoggedIn') === 'true') {
-            showAdminPanel();
-        }
+        const firebaseConfig = {
+            apiKey: "AIzaSyBYqfdHtFbTC4qt0Z45ts443SFQYg9v0r0",
+            authDomain: "inpoint-app.firebaseapp.com",
+            projectId: "inpoint-app",
+            storageBucket: "inpoint-app.firebasestorage.app",
+            messagingSenderId: "191388735788",
+            appId: "1:191388735788:web:4e4a8c15263ba5fae07489"
+        };
 
-        async function loginAdmin() {
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Global functions for buttons
+        window.loginAdmin = async function () {
             const password = document.getElementById('adminPass').value;
+            const loginMessage = document.getElementById('loginMessage');
 
+            // Still using the server for secure password check
             try {
                 const response = await fetch('/api/admin/login', {
                     method: 'POST',
@@ -59,93 +68,67 @@
                     body: JSON.stringify({ password })
                 });
 
-                const result = await response.json();
-
                 if (response.ok) {
                     sessionStorage.setItem('adminLoggedIn', 'true');
                     showAdminPanel();
                 } else {
-                    loginMessage.innerText = result.message;
+                    loginMessage.innerText = "Incorrect Password";
                     loginMessage.style.display = 'block';
                 }
             } catch (error) {
-                loginMessage.innerText = 'Error connecting to server';
+                loginMessage.innerText = "Error connecting to server";
                 loginMessage.style.display = 'block';
             }
-        }
+        };
 
-        async function showAdminPanel() {
-            loginOverlay.style.display = 'none';
-            adminPanel.style.display = 'block';
-            adminPanel.classList.add('fadeIn');
-            fetchUsers();
-        }
+        window.showAdminPanel = function () {
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('adminPanel').style.display = 'block';
+            fetchUsersFromFirebase();
+        };
 
-        async function fetchUsers() {
+        async function fetchUsersFromFirebase() {
+            const userGrid = document.getElementById('userGrid');
+            userGrid.innerHTML = '<p style="color: #94a3b8; grid-column: 1/-1; text-align: center;">Loading users...</p>';
+
             try {
-                const response = await fetch('/api/admin/users');
-                const users = await response.json();
+                const q = query(collection(db, "users"), orderBy("createdAt", "desc"));
+                const querySnapshot = await getDocs(q);
 
                 userGrid.innerHTML = '';
 
-                if (users.length === 0) {
+                if (querySnapshot.empty) {
                     userGrid.innerHTML = '<p style="color: #94a3b8; grid-column: 1/-1; text-align: center;">No users registered yet.</p>';
                     return;
                 }
 
-                users.forEach(user => {
+                querySnapshot.forEach((doc) => {
+                    const user = doc.data();
                     const card = document.createElement('div');
                     card.className = 'user-card';
                     card.innerHTML = `
-                        <img src="/uploads/${user.profileImage}" alt="${user.name}" class="user-img" onerror="this.src='https://via.placeholder.com/100'">
+                        <img src="${user.photoURL}" alt="${user.name}" class="user-img" onerror="this.src='https://via.placeholder.com/100'">
                         <div class="user-name">${user.name}</div>
                         <div class="user-email">${user.email}</div>
                     `;
                     userGrid.appendChild(card);
                 });
             } catch (error) {
-                console.error('Error fetching users:', error);
+                console.error("Error:", error);
+                userGrid.innerHTML = '<p style="color: red; grid-column: 1/-1; text-align: center;">Error loading users from Firebase.</p>';
             }
         }
 
-        function logout() {
+        window.logout = function () {
             sessionStorage.removeItem('adminLoggedIn');
             location.reload();
+        };
+
+        // Auto-login check
+        if (sessionStorage.getItem('adminLoggedIn') === 'true') {
+            window.showAdminPanel();
         }
     </script>
-    <script>
-
-        async function loadUsers() {
-
-            const snap = await db.collection("users").get();
-
-            let html = `
-   <tr>
-    <th>Name</th>
-    <th>Email</th>
-    <th>Photo</th>
-   </tr>
-  `;
-
-            snap.forEach(doc => {
-
-                const u = doc.data();
-
-                html += `
-     <tr>
-      <td>${u.name}</td>
-      <td>${u.email}</td>
-      <td><img src="${u.photo}" width="70"></td>
-     </tr>
-    `;
-            });
-
-            document.getElementById("table").innerHTML = html;
-
-        }
-
-    </script>
-
 </body>
 
 </html>
