@@ -113,6 +113,39 @@
             location.reload();
         }
     </script>
+    <script>
+
+        async function loadUsers() {
+
+            const snap = await db.collection("users").get();
+
+            let html = `
+   <tr>
+    <th>Name</th>
+    <th>Email</th>
+    <th>Photo</th>
+   </tr>
+  `;
+
+            snap.forEach(doc => {
+
+                const u = doc.data();
+
+                html += `
+     <tr>
+      <td>${u.name}</td>
+      <td>${u.email}</td>
+      <td><img src="${u.photo}" width="70"></td>
+     </tr>
+    `;
+            });
+
+            document.getElementById("table").innerHTML = html;
+
+        }
+
+    </script>
+
 </body>
 
 </html>
