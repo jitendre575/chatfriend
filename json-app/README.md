@@ -23,5 +23,4 @@ Since this app uses a static JSON file for its database, you **cannot** use plat
 
 ## Security Notes
 - Data is stored in `data/users.json`.
-- Uses an atomic write pattern (temp file + rename) to prevent database corruption.
-- API endpoints are origin-agnostic (relative paths).
+
